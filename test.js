@@ -1,14 +1,21 @@
 var taskqueue = require('./index.js')();
+var assert = require('assert');
 
-exports.testQueue = function(beforeExit, assert){
-  var flag = false;
-  var async = taskqueue.add('task', {id: 1}, function(job, done){
-    console.log(job);
-    flag= true;
-    done();
-  }, {});
+describe('should route the job correctly', function() {
 
-  async.done(function(result){
-    assert.ok(flag == true);
-  })
-}
+  it('kue test', function(done) {
+    var flag = false;
+    var async = taskqueue.add('task', {
+      id: 1
+    }, function(job, dn) {
+      flag = true;
+      dn();
+    }, {});
+
+    async.done(function(result) {
+      assert.ok(flag == true);
+      done();
+    })
+  });
+
+});

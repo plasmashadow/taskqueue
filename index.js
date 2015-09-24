@@ -1,4 +1,4 @@
-module.exports = function Factory(queue){
+module.exports = function Factory(queue) {
   return new TaskQueue(queue);
 }
 
@@ -7,16 +7,18 @@ var $ = require('jquery-deferred');
 var Emitter = require('events').EventEmitter;
 var assign = require('object-assign');
 
-function TaskQueue(queue){
-  queue = queue || (function(){
+function TaskQueue(queue) {
+  queue = queue || (function() {
     return kue.createQueue();
-  });
+  })();
 
   this._defaults = {
-     priority: 'normal',
-     attempts: 1,
-     delay: 1,
-     backoff: {type: 'exponential'}
+    priority: 'normal',
+    attempts: 1,
+    delay: 1,
+    backoff: {
+      type: 'exponential'
+    }
   }
 
   this.queue = queue;
@@ -25,14 +27,14 @@ function TaskQueue(queue){
 
 TaskQueue.prototype = new Emitter;
 
-TaskQueue.prototype.add = function(name, data, fn, options){
-  if(!(name in this.jobs)){
+TaskQueue.prototype.add = function(name, data, fn, options) {
+  if (!(name in this.jobs)) {
     this.emit('add', {
       name: name
     });
     this.jobs.push(name);
-    this.queue.progress(name, function(job, done){
-       fn(job, done);
+    this.queue.process(name, function(job, done) {
+      fn(job, done);
     });
   }
 
@@ -41,36 +43,41 @@ TaskQueue.prototype.add = function(name, data, fn, options){
   var async = $.Deferred();
 
   var job = this.queue.create(name, data)
-            .priority(options.priority)
-            .attempts(options.attempts)
-            .ttl(options.delay)
-            .backoff(options.backoff);
+    .priority(options.priority)
+    .attempts(options.attempts)
+    .ttl(options.delay)
+    .backoff(options.backoff);
 
   var that = this;
 
-  job = job.save(function(err){
-    if(err){
+  job = job.save(function(err) {
+    if (err) {
       that.emit('error', err);
-    }
-    else{
-      that.emit('save', {name: name, data: data});
+    } else {
+      that.emit('save', {
+        name: name,
+        data: data
+      });
     }
   });
 
 
-  job.on('complete', function(){
-    async.resolve();
+  job.on('complete', function(result) {
+    async.resolve(result);
   });
 
-  job.on('failed', function(err){
+  job.on('failed', function(err) {
     async.reject(err);
   })
 
-  job.on('failed attempt', function(err, attempts){
-    async.notify({error: err, attempt: attempts}, null , null);
+  job.on('failed attempt', function(err, attempts) {
+    async.notify({
+      error: err,
+      attempt: attempts
+    }, null, null);
   });
 
-  job.on('progress', function(progress, data){
+  job.on('progress', function(progress, data) {
     async.notify(null, progress, data);
   })
 
